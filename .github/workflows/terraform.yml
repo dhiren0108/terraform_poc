@@ -1,0 +1,59 @@
+name: Terraform Azure Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  terraform:
+    name: 'Terraform'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.5.0
+
+      - name: Azure Login action
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Terraform Init
+        run: |
+          terraform init \
+            -backend-config="access_key=${{ secrets.STORAGE_ACCOUNT_KEY }}"
+
+      - name: Terraform Validate
+        run: terraform validate
+
+      - name: Terraform Plan
+        env:
+          ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+          ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+          ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+        run: |
+          terraform plan \
+            -var="tenant_id=${ARM_TENANT_ID}" \
+            -var="subscription_id=${ARM_SUBSCRIPTION_ID}" \
+            -var="client_id=${ARM_CLIENT_ID}" \
+            -var="client_secret=${ARM_CLIENT_SECRET}" \
+            -var="admin_username=${{ secrets.ADMIN_USERNAME }}" \
+            -var="admin_password=${{ secrets.ADMIN_PASSWORD }}"
+
+
+      # - name: Terraform Apply
+      #   run: |
+      #     terraform apply -auto-approve \
+      #       -var="admin_username=${{ secrets.ADMIN_USERNAME }}" \
+      #       -var="admin_password=${{ secrets.ADMIN_PASSWORD }}"
