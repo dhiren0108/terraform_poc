@@ -1,11 +1,20 @@
 name: Terraform Azure Deploy
 
 on:
-  push:
-    branches:
-      - main
+#  push:
+#    branches:
+#     - main
 
   workflow_dispatch:
+    inputs:
+      action:
+        description: 'Choose action'
+        required: true
+        default: 'apply'
+        type: choice
+        options:
+          - apply
+          - destroy
 
 permissions:
   id-token: write
@@ -55,6 +64,7 @@ jobs:
 
 
       - name: Terraform Apply
+        if: ${{ github.event.inputs.action == 'apply' }}
         env:
           ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
           ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
@@ -68,4 +78,8 @@ jobs:
             -var="client_secret=${ARM_CLIENT_SECRET}" \
             -var="admin_username=${{ secrets.ADMIN_USERNAME }}" \
             -var="admin_password=${{ secrets.ADMIN_PASSWORD }}"
+
+      - name: Terraform Destroy
+        if: ${{ github.event.inputs.action == 'destroy' }}
+        run: terraform destroy -auto-approve -input=false
 
